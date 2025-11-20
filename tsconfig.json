@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/app/lib/client/*": ["./src/app/lib/client/*"],
+      "@/app/lib/server/*": ["./src/app/lib/server/*"]
     }
   },
   "include": [
@@ -28,7 +30,8 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    "src/types/environment.d.ts"
   ],
   "exclude": ["node_modules"]
 }
