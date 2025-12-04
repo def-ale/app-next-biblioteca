@@ -17,7 +17,7 @@ export function verificarToken(request: NextRequest): PayloadUsuario | null {
   }
 
   try {
-    const decodificado = jwt.verify(token, JWT_SECRET) as PayloadUsuario;
+    const decodificado = jwt.verify(token, JWT_SECRET) as unknown as PayloadUsuario;
     return decodificado;
   } catch (erro) {
     console.error('Erro ao verificar token:', erro);
