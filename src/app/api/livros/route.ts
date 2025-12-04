@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { obterDb } from '@/app/lib/server/lib/database';
+import { sql } from '@vercel/postgres';
 import { verificarToken, autorizarPerfil } from '@/app/lib/server/lib/auth';
 
 export async function POST(req: NextRequest) {
@@ -18,17 +18,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ mensagem: 'Título, autor e ISBN são obrigatórios' }, { status: 400 });
     }
 
-    const db = await obterDb();
-    const result = await db.run(
-      'INSERT INTO Livro (titulo, autor, isbn) VALUES (?, ?, ?)',
-      titulo,
-      autor,
-      isbn
-    );
+    const { rows } = await sql`
+      INSERT INTO Livro (titulo, autor, isbn) 
+      VALUES (${titulo}, ${autor}, ${isbn})
+      RETURNING id
+    `;
 
-    return NextResponse.json({ mensagem: 'Livro criado com sucesso', id: result.lastID }, { status: 201 });
+    return NextResponse.json({ mensagem: 'Livro criado com sucesso', id: rows[0].id }, { status: 201 });
   } catch (error: any) {
-    if (error.message.includes('UNIQUE constraint failed: Livro.isbn')) {
+    // Código '23505' é para violação de constraint unique no PostgreSQL
+    if (error.code === '23505' && error.constraint === 'livro_isbn_key') {
       return NextResponse.json({ mensagem: 'ISBN já cadastrado' }, { status: 409 });
     }
     console.error('Erro ao criar livro:', error);
@@ -44,8 +43,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const db = await obterDb();
-    const livros = await db.all('SELECT * FROM Livro');
+    const { rows: livros } = await sql`SELECT * FROM Livro`;
     return NextResponse.json(livros, { status: 200 });
   } catch (error) {
     console.error('Erro ao listar livros:', error);

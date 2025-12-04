@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { obterDb } from '@/app/lib/server/lib/database';
+import { sql } from '@vercel/postgres';
 import { verificarToken, autorizarPerfil } from '@/app/lib/server/lib/auth';
 
 export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -13,13 +13,10 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
 
   try {
     const { id: multaId } = await context.params;
-    const db = await obterDb();
 
     // Buscar a multa
-    const multa = await db.get(
-      'SELECT id, paga FROM Multa WHERE id = ?',
-      multaId
-    );
+    const { rows } = await sql`SELECT id, paga FROM Multa WHERE id = ${multaId}`;
+    const multa = rows[0];
 
     if (!multa) {
       return NextResponse.json({ mensagem: 'Multa não encontrada' }, { status: 404 });
@@ -30,7 +27,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     }
 
     // Marcar a multa como paga
-    await db.run('UPDATE Multa SET paga = 1 WHERE id = ?', multaId);
+    await sql`UPDATE Multa SET paga = 1 WHERE id = ${multaId}`;
 
     return NextResponse.json({ mensagem: 'Multa paga com sucesso.' }, { status: 200 });
   } catch (error) {

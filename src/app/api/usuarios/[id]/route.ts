@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { obterDb } from '@/app/lib/server/lib/database';
+import { sql } from '@vercel/postgres';
 import { verificarToken } from '@/app/lib/server/lib/auth';
 
 export async function GET(
@@ -26,11 +26,10 @@ export async function GET(
   }
 
   try {
-    const db = await obterDb();
-    const dadosUsuario = await db.get(
-      'SELECT id, nome, email, perfil FROM Usuario WHERE id = ?',
-      usuarioId
-    );
+    const { rows } = await sql`
+      SELECT id, nome, email, perfil FROM Usuario WHERE id = ${usuarioId}
+    `;
+    const dadosUsuario = rows[0];
 
     if (!dadosUsuario) {
       return NextResponse.json(

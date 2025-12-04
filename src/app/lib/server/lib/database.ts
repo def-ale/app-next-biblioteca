@@ -1,43 +1,28 @@
-
-import sqlite3 from 'sqlite3';
-import { open, Database } from 'sqlite';
+import { sql } from '@vercel/postgres';
 import bcrypt from 'bcrypt';
 
-let banco: Database | null = null;
-
-export async function obterDb() {
-  if (!banco) {
-    const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : './database.sqlite';
-    banco = await open({
-      filename: dbPath,
-      driver: sqlite3.verbose().Database
-    });
-  }
-  return banco;
-}
-
 export async function iniciarDb() {
-  const db = await obterDb();
-
-  await db.exec(`
+  await sql`
     CREATE TABLE IF NOT EXISTS Usuario (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       nome TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
       senha TEXT NOT NULL,
       perfil TEXT NOT NULL CHECK(perfil IN ('admin', 'bibliotecario', 'aluno'))
     );
-
+  `;
+  await sql`
     CREATE TABLE IF NOT EXISTS Livro (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       titulo TEXT NOT NULL,
       autor TEXT NOT NULL,
       isbn TEXT UNIQUE,
       disponivel INTEGER NOT NULL DEFAULT 1
     );
-
+  `;
+  await sql`
     CREATE TABLE IF NOT EXISTS Emprestimo (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       livroId INTEGER NOT NULL,
       usuarioId INTEGER NOT NULL,
       dataEmprestimo TEXT NOT NULL,
@@ -46,22 +31,26 @@ export async function iniciarDb() {
       FOREIGN KEY (livroId) REFERENCES Livro(id),
       FOREIGN KEY (usuarioId) REFERENCES Usuario(id)
     );
-
+  `;
+  await sql`
     CREATE TABLE IF NOT EXISTS Multa (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       emprestimoId INTEGER NOT NULL,
       valor REAL NOT NULL,
       paga INTEGER NOT NULL DEFAULT 0,
       FOREIGN KEY (emprestimoId) REFERENCES Emprestimo(id)
     );
-  `);
+  `;
 
   // Insere um usuário administrador padrão se não existir
-  const administrador = await db.get('SELECT * FROM Usuario WHERE perfil = ?', 'admin');
-  if (!administrador) {
+  const { rows: administradores } = await sql`SELECT * FROM Usuario WHERE perfil = 'admin'`;
+  
+  if (administradores.length === 0) {
     const saltRounds = 10;
     const senhaComHash = await bcrypt.hash('admin', saltRounds);
-    await db.run('INSERT INTO Usuario (nome, email, senha, perfil) VALUES (?, ?, ?, ?)', 'Admin', 'admin@admin.com', senhaComHash, 'admin');
+    await sql`
+      INSERT INTO Usuario (nome, email, senha, perfil) 
+      VALUES ('Admin', 'admin@admin.com', ${senhaComHash}, 'admin')
+    `;
   }
 }
-  

@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { obterDb } from '@/app/lib/server/lib/database';
+import { sql } from '@vercel/postgres';
 import { verificarToken, autorizarPerfil } from '@/app/lib/server/lib/auth';
 
 export async function GET(req: NextRequest) {
@@ -12,8 +12,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const db = await obterDb();
-    const multas = await db.all(`
+    const { rows: multas } = await sql`
       SELECT
         F.id as multaId,
         F.valor,
@@ -28,7 +27,7 @@ export async function GET(req: NextRequest) {
       JOIN Livro B ON L.livroId = B.id
       JOIN Usuario U ON L.usuarioId = U.id
       WHERE F.paga = 0
-    `);
+    `;
     return NextResponse.json(multas, { status: 200 });
   } catch (error) {
     console.error('Erro ao listar multas:', error);

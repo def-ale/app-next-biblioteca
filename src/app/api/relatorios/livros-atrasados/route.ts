@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { obterDb } from '@/app/lib/server/lib/database';
+import { sql } from '@vercel/postgres';
 import { verificarToken, autorizarPerfil } from '@/app/lib/server/lib/auth';
 
 export async function GET(req: NextRequest) {
@@ -12,10 +12,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const db = await obterDb();
     const hoje = new Date().toISOString().split('T')[0];
 
-    const livrosAtrasados = await db.all(`
+    const { rows: livrosAtrasados } = await sql`
       SELECT
         L.id as emprestimoId,
         L.dataEmprestimo,
@@ -27,8 +26,8 @@ export async function GET(req: NextRequest) {
       FROM Emprestimo L
       JOIN Livro B ON L.livroId = B.id
       JOIN Usuario U ON L.usuarioId = U.id
-      WHERE L.dataDevolucao < ? AND L.dataEntrega IS NULL
-    `, hoje);
+      WHERE L.dataDevolucao < ${hoje} AND L.dataEntrega IS NULL
+    `;
 
     return NextResponse.json(livrosAtrasados, { status: 200 });
   } catch (error) {
