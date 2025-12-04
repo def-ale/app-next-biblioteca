@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.STACK_SECRET_SERVER_KEY;
 
 interface PayloadUsuario {
   id: number;

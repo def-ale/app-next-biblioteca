@@ -4,7 +4,7 @@ import { sql } from '@vercel/postgres';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.STACK_SECRET_SERVER_KEY;
 
 export async function POST(req: NextRequest) {
   try {
