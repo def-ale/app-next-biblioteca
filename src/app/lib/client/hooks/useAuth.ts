@@ -41,7 +41,7 @@ export function useAuth(perfisNecessarios?: string[]) {
     
     setLoading(false);
 
-  }, [perfisNecessarios, router]);
+  }, [JSON.stringify(perfisNecessarios), router]);
 
   return { usuario, loading };
 }

@@ -1,161 +1,332 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+
+
+import { useState, useEffect, useMemo } from 'react';
+
 import { useAuth } from '@/app/lib/client/hooks/useAuth';
 
+
+
 interface Emprestimo {
+
   emprestimoId: number;
+
   dataEmprestimo: string;
+
   dataDevolucao: string;
+
   dataEntrega: string | null;
+
   livroTitulo: string;
+
   livroAutor: string;
+
   usuarioNome: string;
+
   usuarioEmail: string;
+
 }
 
+
+
+const formatarData = (dataString: string) => new Date(dataString).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+
+
+
+const PageFeedback = ({ message, isError }: { message: string; isError: boolean; }) => {
+
+  if (!message) return null;
+
+  const baseClasses = "p-4 rounded-md text-sm font-medium mb-6";
+
+  const successClasses = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+
+  const errorClasses = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+
+  return (
+
+    <div className={`${baseClasses} ${isError ? errorClasses : successClasses}`}>
+
+      {message}
+
+    </div>
+
+  );
+
+};
+
+
+
 export default function DevolverLivroPage() {
+
   const { usuario, loading } = useAuth(['admin', 'bibliotecario']);
+
   const [emprestimos, setEmprestimos] = useState<Emprestimo[]>([]);
-  const [mensagem, setMensagem] = useState('');
+
+  const [feedback, setFeedback] = useState({ message: '', isError: false });
+
+  const [termoBusca, setTermoBusca] = useState('');
+
+
 
   const buscarEmprestimos = async () => {
+
     if (loading || !usuario) return;
 
     const token = localStorage.getItem('token');
+
     if (!token) {
-      setMensagem('Você precisa estar logado para gerenciar devoluções.');
+
+      setFeedback({ message: 'Você precisa estar logado.', isError: true });
+
       return;
+
     }
 
     try {
-      const response = await fetch('/api/emprestimos', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+
+      const response = await fetch('/api/emprestimos', { headers: { 'Authorization': `Bearer ${token}` } });
 
       const data = await response.json();
 
       if (response.ok) {
-        setEmprestimos(data.filter((emprestimo: Emprestimo) => !emprestimo.dataEntrega)); // Apenas empréstimos ativos
+
+        setEmprestimos(data.filter((e: Emprestimo) => !e.dataEntrega));
+
       } else {
-        setMensagem(`Erro ao carregar empréstimos: ${data.mensagem}`);
+
+        throw new Error(data.mensagem || 'Erro ao carregar empréstimos.');
+
       }
+
     } catch (error) {
-      console.error('Erro ao buscar empréstimos:', error);
-      setMensagem('Erro de rede ao buscar empréstimos.');
+
+      setFeedback({ message: error instanceof Error ? error.message : 'Erro de rede.', isError: true });
+
     }
+
   };
+
+
 
   useEffect(() => {
+
     buscarEmprestimos();
+
   }, [usuario, loading]);
 
-  if (loading) {
-    return <p className="text-center mt-8">Carregando...</p>;
-  }
 
-  if (!usuario) {
-    return null;
-  }
 
   const realizarDevolucao = async (emprestimoId: number) => {
+
     const token = localStorage.getItem('token');
+
     if (!token) {
-      setMensagem('Você precisa estar logado para registrar devoluções.');
+
+      setFeedback({ message: 'Acesso negado.', isError: true });
+
       return;
+
     }
 
     try {
+
       const response = await fetch(`/api/emprestimos/${emprestimoId}/devolver`, {
+
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+
+        headers: { 'Authorization': `Bearer ${token}` },
+
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setMensagem(`Devolução registrada com sucesso! ${data.mensagem}`);
-        buscarEmprestimos(); // Recarregar a lista de empréstimos
+
+        setFeedback({ message: `Devolução registrada! ${data.mensagem || ''}`, isError: false });
+
+        buscarEmprestimos(); // Recarregar
+
       } else {
-        setMensagem(`Erro ao registrar devolução: ${data.mensagem}`);
+
+        throw new Error(data.mensagem || 'Erro ao registrar devolução.');
+
       }
+
     } catch (error) {
-      console.error('Erro ao registrar devolução:', error);
-      setMensagem('Erro de rede ao registrar devolução.');
+
+      setFeedback({ message: error instanceof Error ? error.message : 'Erro de rede.', isError: true });
+
     }
+
   };
 
+
+
+  const emprestimosFiltrados = useMemo(() => {
+
+    if (!termoBusca) return emprestimos;
+
+    return emprestimos.filter(e =>
+
+      e.livroTitulo.toLowerCase().includes(termoBusca.toLowerCase()) ||
+
+      e.usuarioNome.toLowerCase().includes(termoBusca.toLowerCase()) ||
+
+      e.usuarioEmail.toLowerCase().includes(termoBusca.toLowerCase())
+
+    );
+
+  }, [emprestimos, termoBusca]);
+
+
+
+  if (loading) {
+
+    return <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]"><p className="text-lg text-gray-600 dark:text-gray-400">Carregando...</p></div>;
+
+  }
+
+  if (!usuario) return null;
+
+
+
   return (
-    <div className="flex min-h-screen flex-col items-center p-8 bg-zinc-50 font-sans dark:bg-black">
-      <h1 className="text-3xl font-bold mb-8 text-gray-900">Registrar Devolução de Livro</h1>
-      {mensagem && <p className="mb-4 text-center text-red-500">{mensagem}</p>}
-      <div className="w-full max-w-4xl bg-white rounded-lg shadow-md p-6">
-        {emprestimos.length === 0 ? (
-          <p className="text-center text-gray-600">Nenhum empréstimo ativo para devolução.</p>
-        ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ID Empréstimo
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Livro
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Usuário
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Data Empréstimo
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Data Devolução Prevista
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ações
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {emprestimos.map((emprestimo) => (
-                <tr key={emprestimo.emprestimoId}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {emprestimo.emprestimoId}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {emprestimo.livroTitulo} ({emprestimo.livroAutor})
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {emprestimo.usuarioNome} ({emprestimo.usuarioEmail})
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {emprestimo.dataEmprestimo}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {emprestimo.dataDevolucao}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <button
-                      onClick={() => realizarDevolucao(emprestimo.emprestimoId)}
-                      className="px-4 py-2 font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                    >
-                      Devolver
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+
+    <div className="min-h-[calc(100vh-4rem)] bg-gray-50 dark:bg-black">
+
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+        <header className="mb-8">
+
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">Registrar Devolução</h1>
+
+          <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">Localize um empréstimo ativo para registrar a devolução do livro.</p>
+
+        </header>
+
+
+
+        <div className="mb-6">
+
+          <input
+
+            type="text"
+
+            placeholder="Buscar por livro, nome ou email do usuário..."
+
+            value={termoBusca}
+
+            onChange={(e) => setTermoBusca(e.target.value)}
+
+            className="w-full max-w-lg px-4 py-2 text-gray-900 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white dark:border-gray-600"
+
+          />
+
+        </div>
+
+
+
+        <PageFeedback message={feedback.message} isError={feedback.isError} />
+
+        
+
+        <div className="overflow-x-auto bg-white rounded-lg shadow dark:bg-gray-800">
+
+          <div className="min-w-full align-middle">
+
+            {emprestimosFiltrados.length === 0 ? (
+
+              <p className="p-6 text-center text-gray-600 dark:text-gray-400">
+
+                {termoBusca ? 'Nenhum empréstimo encontrado.' : 'Nenhum empréstimo ativo no momento.'}
+
+              </p>
+
+            ) : (
+
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+
+                <thead className="bg-gray-50 dark:bg-gray-700">
+
+                  <tr>
+
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Livro</th>
+
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Usuário</th>
+
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Data Empréstimo</th>
+
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Devolução Prevista</th>
+
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ação</th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+
+                  {emprestimosFiltrados.map((emprestimo) => (
+
+                    <tr key={emprestimo.emprestimoId} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+
+                      <td className="px-6 py-4 whitespace-nowrap">
+
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">{emprestimo.livroTitulo}</div>
+
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{emprestimo.livroAutor}</div>
+
+                      </td>
+
+                      <td className="px-6 py-4 whitespace-nowrap">
+
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">{emprestimo.usuarioNome}</div>
+
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{emprestimo.usuarioEmail}</div>
+
+                      </td>
+
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{formatarData(emprestimo.dataEmprestimo)}</td>
+
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{formatarData(emprestimo.dataDevolucao)}</td>
+
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+
+                        <button
+
+                          onClick={() => realizarDevolucao(emprestimo.emprestimoId)}
+
+                          className="px-4 py-2 font-semibold text-white bg-green-600 rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+
+                        >
+
+                          Registrar Devolução
+
+                        </button>
+
+                      </td>
+
+                    </tr>
+
+                  ))}
+
+                </tbody>
+
+              </table>
+
+            )}
+
+          </div>
+
+        </div>
+
+      </main>
+
     </div>
+
   );
+
 }
