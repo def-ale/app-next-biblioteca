@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { rows: usuarios } = await sql`SELECT id, nome, email, perfil FROM Usuario`; // Excluir a senha por segurança
+    const { rows: usuarios } = await sql`SELECT id AS "id", nome AS "nome", email AS "email", perfil AS "perfil" FROM Usuario`; // Excluir a senha por segurança
     return NextResponse.json(usuarios, { status: 200 });
   } catch (error) {
     console.error('Erro ao listar usuários:', error);

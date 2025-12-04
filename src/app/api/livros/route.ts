@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { rows: livros } = await sql`SELECT * FROM Livro`;
+    const { rows: livros } = await sql`SELECT id AS "id", titulo AS "titulo", autor AS "autor", isbn AS "isbn", disponivel AS "disponivel" FROM Livro`;
     return NextResponse.json(livros, { status: 200 });
   } catch (error) {
     console.error('Erro ao listar livros:', error);

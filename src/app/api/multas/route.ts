@@ -14,14 +14,14 @@ export async function GET(req: NextRequest) {
   try {
     const { rows: multas } = await sql`
       SELECT
-        F.id as multaId,
-        F.valor,
-        F.paga,
-        L.id as emprestimoId,
-        L.dataEmprestimo,
-        L.dataDevolucao,
-        B.titulo as livroTitulo,
-        U.nome as usuarioNome
+        F.id AS "multaId",
+        F.valor AS "valor",
+        F.paga AS "paga",
+        L.id AS "emprestimoId",
+        L.dataEmprestimo AS "dataEmprestimo",
+        L.dataDevolucao AS "dataDevolucao",
+        B.titulo AS "livroTitulo",
+        U.nome AS "usuarioNome"
       FROM Multa F
       JOIN Emprestimo L ON F.emprestimoId = L.id
       JOIN Livro B ON L.livroId = B.id

@@ -16,13 +16,13 @@ export async function GET(req: NextRequest) {
 
     const { rows: livrosAtrasados } = await sql`
       SELECT
-        L.id as emprestimoId,
-        L.dataEmprestimo,
-        L.dataDevolucao,
-        B.titulo as livroTitulo,
-        B.autor as livroAutor,
-        U.nome as usuarioNome,
-        U.email as usuarioEmail
+        L.id AS "emprestimoId",
+        L.dataEmprestimo AS "dataEmprestimo",
+        L.dataDevolucao AS "dataDevolucao",
+        B.titulo AS "livroTitulo",
+        B.autor AS "livroAutor",
+        U.nome AS "usuarioNome",
+        U.email AS "usuarioEmail"
       FROM Emprestimo L
       JOIN Livro B ON L.livroId = B.id
       JOIN Usuario U ON L.usuarioId = U.id

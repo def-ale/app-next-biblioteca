@@ -27,7 +27,7 @@ export async function GET(
 
   try {
     const { rows } = await sql`
-      SELECT id, nome, email, perfil FROM Usuario WHERE id = ${usuarioId}
+      SELECT id AS "id", nome AS "nome", email AS "email", perfil AS "perfil" FROM Usuario WHERE id = ${usuarioId}
     `;
     const dadosUsuario = rows[0];
 
