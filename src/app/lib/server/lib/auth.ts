@@ -16,6 +16,12 @@ export function verificarToken(request: NextRequest): PayloadUsuario | null {
     return null;
   }
 
+  // Garante que o segredo não é undefined, resolvendo o erro de tipo
+  if (!JWT_SECRET) {
+    console.error('A variável de ambiente STACK_SECRET_SERVER_KEY não está definida.');
+    return null;
+  }
+
   try {
     const decodificado = jwt.verify(token, JWT_SECRET) as unknown as PayloadUsuario;
     return decodificado;
